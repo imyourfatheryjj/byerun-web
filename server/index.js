@@ -47,12 +47,19 @@ app.all('*', async (req, res) => {
 
     logger.info(`Forwarding request to: ${backendUrl}`);
 
-    const newHeaders = { ...req.headers };
-    delete newHeaders.host;
+    // Only forward essential headers — strip browser-specific headers
+    // that the backend load balancer rejects (405)
+    const forwardHeaders = {};
+    const allowed = ['content-type', 'appkey', 'sign', 'token'];
+    for (const key of allowed) {
+      if (req.headers[key]) {
+        forwardHeaders[key] = req.headers[key];
+      }
+    }
 
     const init = {
         method: req.method,
-        headers: newHeaders,
+        headers: forwardHeaders,
         body: req.method === 'GET' ? null : JSON.stringify(req.body)
     };
 
